@@ -1,25 +1,31 @@
 package com.hex.ecommerce.service;
 
 import com.hex.ecommerce.enums.Category;
+import com.hex.ecommerce.enums.Role;
 import com.hex.ecommerce.model.Customer;
 import com.hex.ecommerce.model.Product;
+import com.hex.ecommerce.model.User;
 import com.hex.ecommerce.model.Vendor;
 import com.hex.ecommerce.repository.CustomerRepository;
 import com.hex.ecommerce.repository.ProductRepository;
+import com.hex.ecommerce.repository.UserRepository;
 import com.hex.ecommerce.repository.VendorRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class DataInitializationService implements CommandLineRunner {
 
     private final VendorRepository vendorRepository;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
@@ -65,6 +71,23 @@ public class DataInitializationService implements CommandLineRunner {
         
         customerRepository.saveAll(customers);
 
+        // Create Sample Users for Authentication
+        List<User> users = List.of(
+            new User("admin", "admin@ecommerce.com", passwordEncoder.encode("admin123"), "System Administrator", Role.ADMIN),
+            new User("customer1", "customer1@email.com", passwordEncoder.encode("customer123"), "John Doe", Role.CUSTOMER),
+            new User("customer2", "customer2@email.com", passwordEncoder.encode("customer123"), "Jane Smith", Role.CUSTOMER),
+            new User("vendor1", "vendor1@email.com", passwordEncoder.encode("vendor123"), "TechCorp Manager", Role.VENDOR),
+            new User("vendor2", "vendor2@email.com", passwordEncoder.encode("vendor123"), "ElectroWorld Manager", Role.VENDOR)
+        );
+        
+        userRepository.saveAll(users);
+
         System.out.println("Sample data initialized successfully!");
+        System.out.println("=== Sample Users Created ===");
+        System.out.println("Admin: username=admin, password=admin123");
+        System.out.println("Customer1: username=customer1, password=customer123");
+        System.out.println("Customer2: username=customer2, password=customer123");
+        System.out.println("Vendor1: username=vendor1, password=vendor123");
+        System.out.println("Vendor2: username=vendor2, password=vendor123");
     }
 }

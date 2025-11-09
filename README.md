@@ -81,6 +81,7 @@ GET /api/vendors/with-product-count
 ## Technology Stack
 
 - **Framework**: Spring Boot 3.5.7
+- **Security**: Spring Security with Basic Authentication
 - **Database**: MySQL
 - **ORM**: JPA/Hibernate
 - **Build Tool**: Maven
@@ -105,37 +106,91 @@ The application automatically initializes with sample data including:
 - 3 Vendors (TechCorp, ElectroWorld, GadgetHub)
 - 12 Products across all categories
 - 5 Customers
+- 5 Users for authentication:
+  - **Admin**: username=`admin`, password=`admin123`
+  - **Customer1**: username=`customer1`, password=`customer123`
+  - **Customer2**: username=`customer2`, password=`customer123`
+  - **Vendor1**: username=`vendor1`, password=`vendor123`
+  - **Vendor2**: username=`vendor2`, password=`vendor123`
 
 ## API Documentation
 
-### Product APIs
-- `POST /api/products` - Add new product
-- `GET /api/products/{id}` - Get product by ID
-- `GET /api/products` - Get all products
-- `GET /api/products/filter` - Filter products by category (no pagination)
-- `GET /api/products/sort` - Sort products by price using Streams (with pagination)
-- `GET /api/products/info-with-customer-count` - Get product info with customer count
-- `GET /api/products/category-stats` - Get category statistics using Streams
-- `GET /api/products/vendor/{vendorId}` - Get products by vendor
-- `GET /api/products/price-range` - Get products by price range
+### 🔐 Authentication APIs
 
-### Vendor APIs
-- `POST /api/vendors` - Add new vendor
-- `GET /api/vendors/{id}` - Get vendor by ID
-- `GET /api/vendors` - Get all vendors
-- `GET /api/vendors/with-product-count` - Get vendors with product count
-- `GET /api/vendors/city/{city}` - Get vendors by city
+#### Signup
+```http
+POST /api/auth/signup
+```
+**Body:**
+```json
+{
+    "username": "newuser",
+    "email": "newuser@email.com",
+    "password": "password123",
+    "fullName": "New User",
+    "role": "CUSTOMER"
+}
+```
+**Roles**: `CUSTOMER`, `VENDOR`, `ADMIN`
 
-### Customer APIs
-- `POST /api/customers` - Add new customer
-- `GET /api/customers/{id}` - Get customer by ID
-- `GET /api/customers` - Get all customers
-- `GET /api/customers/city/{city}` - Get customers by city
+#### Login (Basic Authentication)
+```http
+GET /api/auth/login
+Authorization: Basic <base64(username:password)>
+```
+**Example with credentials:**
+- Username: `customer1`
+- Password: `customer123`
+- Authorization: `Basic Y3VzdG9tZXIxOmN1c3RvbWVyMTIz`
 
-### Purchase APIs
-- `POST /api/purchases` - Purchase product
-- `GET /api/purchases/customer/{customerId}` - Get purchases by customer
-- `GET /api/purchases/product/{productId}` - Get purchases by product
+**Response:**
+```json
+{
+    "id": 2,
+    "username": "customer1",
+    "email": "customer1@email.com",
+    "fullName": "John Doe",
+    "role": "CUSTOMER",
+    "createdAt": "2025-11-08T23:15:30.123456",
+    "enabled": true
+}
+```
+
+#### Test Endpoints
+- `GET /api/auth/public/hello` - Public access
+- `GET /api/auth/user/hello` - Authenticated users
+- `GET /api/auth/admin/hello` - Admin only
+- `GET /api/auth/customer/hello` - Customer only
+- `GET /api/auth/vendor/hello` - Vendor only
+
+### 🛍️ Product APIs
+- `POST /api/products` - Add new product (**Vendor/Admin only**)
+- `GET /api/products/{id}` - Get product by ID (**Public**)
+- `GET /api/products` - Get all products (**Public**)
+- `GET /api/products/filter` - Filter products by category (**Public**)
+- `GET /api/products/sort` - Sort products by price using Streams (**Public**)
+- `GET /api/products/info-with-customer-count` - Get product info with customer count (**Public**)
+- `GET /api/products/category-stats` - Get category statistics using Streams (**Public**)
+- `GET /api/products/vendor/{vendorId}` - Get products by vendor (**Public**)
+- `GET /api/products/price-range` - Get products by price range (**Public**)
+
+### 🏢 Vendor APIs
+- `POST /api/vendors` - Add new vendor (**Admin only**)
+- `GET /api/vendors/{id}` - Get vendor by ID (**Public**)
+- `GET /api/vendors` - Get all vendors (**Public**)
+- `GET /api/vendors/with-product-count` - Get vendors with product count (**Public**)
+- `GET /api/vendors/city/{city}` - Get vendors by city (**Public**)
+
+### 👥 Customer APIs
+- `POST /api/customers` - Add new customer (**Admin only**)
+- `GET /api/customers/{id}` - Get customer by ID (**Admin only**)
+- `GET /api/customers` - Get all customers (**Admin only**)
+- `GET /api/customers/city/{city}` - Get customers by city (**Admin only**)
+
+### 🛒 Purchase APIs
+- `POST /api/purchases` - Purchase product (**Customer only**)
+- `GET /api/purchases/customer/{customerId}` - Get purchases by customer (**Customer/Admin**)
+- `GET /api/purchases/product/{productId}` - Get purchases by product (**Vendor/Admin**)
 
 ## Java Streams Implementation
 
@@ -147,9 +202,34 @@ The application extensively uses Java Streams for:
 5. **Aggregation**: Statistical calculations and customer counting
 6. **Distinct Operations**: Counting unique customers per product
 
+## 🔐 Security Features
+
+### Basic Authentication
+- **HTTP Basic Auth**: Uses username/password in Authorization header
+- **Session-based**: Spring Security manages authentication sessions
+- **Secure Headers**: Standard Basic Authentication header handling
+
+### Role-Based Access Control (RBAC)
+- **ADMIN**: Full system access, can manage all resources
+- **VENDOR**: Can manage their own products, view purchase analytics
+- **CUSTOMER**: Can make purchases, view their order history
+
+### Security Configuration
+- **Password Encryption**: BCrypt hashing for secure password storage
+- **CSRF Protection**: Disabled for REST API (stateless)
+- **CORS**: Configurable for cross-origin requests
+- **Authentication Entry Point**: Custom JWT authentication handling
+
+### Protected Endpoints
+- **Public**: Product browsing, vendor information
+- **Authenticated**: User profile, role-specific actions
+- **Role-Specific**: Admin management, vendor operations, customer purchases
+
 ## Error Handling
 
 Global exception handling for:
 - `InvalidIdException`: When entity not found
 - `InsufficientStockException`: When stock is insufficient for purchase
+- `UsernameAlreadyExistsException`: When username is already taken
+- `EmailAlreadyExistsException`: When email is already in use
 - Generic exceptions with proper HTTP status codes
